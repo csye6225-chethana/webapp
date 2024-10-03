@@ -172,6 +172,8 @@ def update_user_details(user, request):
         value = request.data.get(field)
         if not value or value.strip() == '':
             return Response({'error': f'The field {field} cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+        if(field=='password' and len(value)<8):
+            return Response({'error': 'Password should be atleast 8 charecters'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         if 'first_name' in request.data:
