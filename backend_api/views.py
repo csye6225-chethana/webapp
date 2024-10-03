@@ -39,6 +39,11 @@ def custom_404_view(request, exception):
 
 @api_view(['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST'])
 def create_user(request):
+    try:
+        connection.ensure_connection()
+    except Exception:
+        return HttpResponse(status=503)
+    
     if request.method in ['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD']:
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
@@ -104,6 +109,10 @@ def create_user(request):
 
 @api_view(['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST'])
 def user_detail(request):
+    try:
+        connection.ensure_connection()
+    except Exception:
+        return HttpResponse(status=503)
     
     if request.method in ['OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST']:
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
