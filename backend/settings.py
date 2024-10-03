@@ -30,8 +30,7 @@ SECRET_KEY = 'django-insecure-+89$!srrkz4=h1!&o%1i!-skznn_&sr*-1_pbj)0kq=umadib*
 # DEBUG = True
 DEBUG = False
 
-# ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'yourdomain.com']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,8 +42,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'backend_api'
+    'backend_api',
+    'rest_framework'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -54,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend_api.middleware.CacheControlMiddleware'
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -92,6 +102,12 @@ DATABASES = {
     }
 }
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
