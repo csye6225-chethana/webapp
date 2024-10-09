@@ -23,6 +23,9 @@ I am using Django & PostgreSQL for the backend.
 - Should implement basic http authentication for get and update
 - Write unit tests
 
+## [A03](https://northeastern.instructure.com/courses/192916/assignments/2463019) 
+- Add CI workflow and run it using github actions
+
 ## Prerequisites for building the Django web application:
 
 - Python 3.x 
