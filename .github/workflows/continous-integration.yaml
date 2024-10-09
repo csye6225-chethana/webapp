@@ -3,7 +3,7 @@ name: Django CI
 on:
   pull_request:
     branches:
-      - main-copy
+      - main
 
 jobs:
   build:
