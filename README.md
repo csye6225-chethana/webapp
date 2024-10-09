@@ -25,7 +25,7 @@ I am using Django & PostgreSQL for the backend.
 
 ## [A03](https://northeastern.instructure.com/courses/192916/assignments/2463019) 
 - Add CI workflow and run it using github actions
-- testingg
+- Add terraform
 
 ## Prerequisites for building the Django web application:
 
