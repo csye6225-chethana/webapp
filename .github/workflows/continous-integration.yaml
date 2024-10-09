@@ -13,9 +13,9 @@ jobs:
       postgres:
         image: postgres:latest
         env:
-          POSTGRES_DB: ${{ secrets.DATABASE_NAME }}
-          POSTGRES_USER: ${{ secrets.DATABASE_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          POSTGRES_DB: webappdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Grey@1234
         ports:
           - 5432:5432
         options: >-
@@ -46,19 +46,19 @@ jobs:
         python3 manage.py makemigrations
         python3 manage.py migrate
       env:
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME: webappdb
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: Grey@1234
+          DATABASE_HOST: 127.0.0.1
+          DATABASE_PORT: 5432
 
     - name: Run tests
       run: |
         source venv/bin/activate
         python3 manage.py test
       env:
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME: webappdb
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: Grey@1234
+          DATABASE_HOST: 127.0.0.1
+          DATABASE_PORT: 5432
