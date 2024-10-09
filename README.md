@@ -92,6 +92,8 @@ I am using Django & PostgreSQL for the backend.
 1. Create a droplet(vm) on Digital Ocean.
 2. Generate an ssh key pair and add public key in digital ocean
 3. Add public ip of vm in ssh config as hostname and name host as say 'digitalocean' :
+    cd ~/.ssh
+    vi config
     ```
     # Digital ocean ubuntu droplet
     Host digitalocean
@@ -102,9 +104,10 @@ I am using Django & PostgreSQL for the backend.
     ```
 4. In vm console: `mkdir cloud`
 5. From local, scp the code folder and the setup file into vm: 
-`scp "/Users/chethanabenny/Documents/NEU Coursework/Cloud/webapp.zip" "/Users/chethanabenny/Documents/NEU Coursework/Cloud/setup.sh" digitalocean:/root/cloud`
-6. In vm console run the setup script: `bash setup.sh`
-7. If 6 doesnt work, run each step manually. In vm console:
+`scp "/Users/chethanabenny/Documents/NEU Coursework/Cloud/demo/webapp.zip" "/Users/chethanabenny/Documents/NEU Coursework/Cloud/demo/setup.sh" digitalocean:/root/cloud`
+6. In vm, cd webapp and create .env and paste contents there
+7. cd .. and run the setup script: `bash setup.sh`
+8. If 7 doesnt work, run each step manually. In vm console:
     ```
     sudo apt install
     sudo apt upgrade

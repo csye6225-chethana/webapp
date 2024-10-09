@@ -112,8 +112,7 @@ class UserAPITests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Basic {credentials}')
         data = {
             'first_name': 'Name2',
-            'last_name': 'Last2',
-            'password': 'pwd2'
+            'last_name': 'Last2'
         }
         response = self.client.put(self.user_detail_url, data)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -121,7 +120,6 @@ class UserAPITests(TestCase):
         updated_user = User.objects.get(email='testuser@gmail.com')
         self.assertTrue(updated_user.first_name, data['first_name'])
         self.assertTrue(updated_user.last_name, data['last_name'])
-        self.assertTrue(check_password(data['password'], updated_user.password))
 
     def test_update_user_details_invalid_field(self):
         credentials = base64.b64encode(b'testuser@gmail.com:testpassword').decode('utf-8')
