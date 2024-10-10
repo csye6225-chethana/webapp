@@ -23,6 +23,17 @@ I am using Django & PostgreSQL for the backend.
 - Should implement basic http authentication for get and update
 - Write unit tests
 
+## [A03 AWS setup, Continuous Integration](https://northeastern.instructure.com/courses/192916/assignments/2463019) 
+
+- AWS
+    1. Organisation setup
+    2. IAM setup
+    3. AWS cli
+    4. Infra setup through Terraform
+- CI
+    - Github branch protection Rules
+    - Github Actions workflow
+
 ## Prerequisites for building the Django web application:
 
 - Python 3.x 
