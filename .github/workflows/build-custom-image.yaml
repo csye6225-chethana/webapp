@@ -1,0 +1,100 @@
+name: Run webapp integration tests and then build custom AMI with Packer
+ 
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  webapp_integration_tests:
+    name: Run webapp integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: ${{ secrets.DATABASE_NAME }}
+          POSTGRES_USER: ${{ secrets.DATABASE_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run migrations
+      run: |
+        source venv/bin/activate
+        python3 manage.py makemigrations
+        python3 manage.py migrate
+      env:
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+
+    - name: Run tests
+      run: |
+        source venv/bin/activate
+        python3 manage.py test
+      env:
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+ 
+  build-image:
+    name: Build custom AMI with Packer
+    runs-on: ubuntu-latest
+    needs: webapp_integration_tests
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+ 
+      - name: Zip repository code
+        run: |
+          zip -r webapp.zip .
+ 
+      - name: Setup AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Run packer
+        id: packer
+        run: |
+          cd packer
+          packer init image.pkr.hcl
+          packer build -machine-readable image.pkr.hcl | tee packer.log
+          AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' packer.log | cut -d: -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+
+      - name: Share AMI with Demo Account
+        run: |
+          aws ec2 modify-image-attribute \
+            --image-id ${{ steps.packer.outputs.ami_id }} \
+            --launch-permission '{"Add":[{"UserId":"${{ secrets.DEMO_ACCOUNT_ID }}"}]}'

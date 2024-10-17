@@ -1,0 +1,41 @@
+name: To Format and Validate Packer Template
+ 
+on:
+  pull_request:
+    branches:
+      - main
+ 
+jobs:
+  packer_format_and_validate:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v3
+ 
+      - name: zip repository code
+        run : zip -r webapp.zip .
+ 
+      - name: Packer setup
+        uses: hashicorp/setup-packer@main
+        with:
+          packer-version: 1.7.4
+        
+      - name: Packer format
+        run: |
+          cd packer
+          if ! packer fmt -check .; then
+            echo "Packer template formatting is needed"
+            exit 1
+          fi
+ 
+      - name: Packer validate
+        run: |
+          cd packer
+          packer init ./
+          if ! packer validate .; then
+            echo "Packer validation check failed."
+            exit 1
+          else
+            echo "Packer validation check passed"
+          fi
