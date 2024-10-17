@@ -91,9 +91,17 @@ jobs:
           packer init image.pkr.hcl
           packer build -machine-readable image.pkr.hcl | tee packer.log
           AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' packer.log | cut -d: -f2)
-          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+          if [ -n "$AMI_ID" ]; then
+            echo "New AMI created: $AMI_ID"
+            echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+            echo "AMI_CREATED=true" >> $GITHUB_OUTPUT
+          else
+            echo "No new AMI was created"
+            echo "AMI_CREATED=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Share AMI with Demo Account
+        if: steps.packer.outputs.AMI_CREATED == 'true'
         run: |
           aws ec2 modify-image-attribute \
             --image-id ${{ steps.packer.outputs.ami_id }} \
