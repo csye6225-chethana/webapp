@@ -84,15 +84,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # - name: Run packer
-      #   id: packer
-      #   run: |
-      #     cd packer
-      #     packer init image.pkr.hcl
-      #     packer build -machine-readable image.pkr.hcl | tee packer.log
-      #     AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' packer.log | cut -d: -f2)
-      #     echo "::set-output name=ami_id::$AMI_ID"
-
       - name: Run packer
         id: packer
         run: |
@@ -107,7 +98,3 @@ jobs:
           aws ec2 modify-image-attribute \
             --image-id ${{ steps.packer.outputs.ami_id }} \
             --launch-permission '{"Add":[{"UserId":"${{ secrets.DEMO_ACCOUNT_ID }}"}]}'
-
-      # - name: Share AMI with Demo Account
-      #   run: |
-      #     aws ec2 modify-image-attribute --image-id ${{ steps.packer.outputs.ami_id }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}]"
