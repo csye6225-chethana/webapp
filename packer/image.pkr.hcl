@@ -33,7 +33,7 @@ source "amazon-ebs" "my-ami" {
   instance_type   = "t2.small"
   ssh_username    = "${var.ssh_username}"
   subnet_id       = "${var.subnet_id}"
-  ami_name        = "csye6225_webapp_${formatdate("YYYY_MM_DD", timestamp())}"
+  ami_name        = "csye6225_webapp_${formatdate("YYYY_MM_DD_HH_mm_ss", timestamp())}"
   ami_description = "CSYE6225 Assignment-4 image creation"
 
   launch_block_device_mappings {
