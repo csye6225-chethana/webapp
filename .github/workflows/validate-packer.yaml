@@ -3,7 +3,7 @@ name: To Format and Validate Packer Template
 on:
   pull_request:
     branches:
-      - main-copy
+      - main
  
 jobs:
   packer_format_and_validate:

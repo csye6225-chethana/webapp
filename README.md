@@ -39,8 +39,8 @@ I am using Django & PostgreSQL for the backend.
 ## [A04 Custom Image for webapp, Continuous Integration](https://northeastern.instructure.com/courses/192916/assignments/2473742) 
 
 - Build Custom Image using Packer
-- Automate above step with github actions workflow
-- Use the built image in terraform code and launch an ec2 instance with it
+- Automate above step using github actions workflow
+- Launch an ec2 instance using the custom image from terraform 
 
 ## Prerequisites for building the Django web application:
 
