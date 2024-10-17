@@ -6,64 +6,68 @@ on:
       - main-copy
  
 jobs:
-  integration_tests:
+  webapp_integration_tests:
     name: Run webapp integration tests
     runs-on: ubuntu-latest
- 
+
     services:
       postgres:
         image: postgres:latest
         env:
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DATABASE_NAME }}
+          POSTGRES_USER: ${{ secrets.DATABASE_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
- 
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
- 
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.10'
- 
-      - name: Create virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
- 
-      - name: Run database migrations
-        env:                
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: localhost
-          DB_PORT: 5432
-        run: |
-          source venv/bin/activate
-          python manage.py makemigrations
-          python manage.py migrate
- 
-      - name: Run tests
-        env:
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: localhost
-          DB_PORT: 5432
-        run: |
-          source venv/bin/activate
-          python manage.py test
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run migrations
+      run: |
+        source venv/bin/activate
+        python3 manage.py makemigrations
+        python3 manage.py migrate
+      env:
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+
+    - name: Run tests
+      run: |
+        source venv/bin/activate
+        python3 manage.py test
+      env:
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
  
   build-image:
     name: Build custom AMI with Packer
     runs-on: ubuntu-latest
-    needs: integration_tests
+    needs: webapp_integration_tests
  
     steps:
       - name: Checkout code
@@ -73,23 +77,37 @@ jobs:
         run: |
           zip -r webapp.zip .
  
-      - name: Set up AWS Credentials
+      - name: Setup AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
- 
-      - name: Packer setup
-        uses: hashicorp/setup-packer@main
-        with:
-          packer-version: 1.7.4
- 
-      - name: List directories
-        run: ls -al
- 
-      - name: Run Packer
+
+      # - name: Run packer
+      #   id: packer
+      #   run: |
+      #     cd packer
+      #     packer init image.pkr.hcl
+      #     packer build -machine-readable image.pkr.hcl | tee packer.log
+      #     AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' packer.log | cut -d: -f2)
+      #     echo "::set-output name=ami_id::$AMI_ID"
+
+      - name: Run packer
+        id: packer
         run: |
-          cd aws-packer
-          packer init aws.pkr.hcl
-          packer build aws.pkr.hcl
+          cd packer
+          packer init image.pkr.hcl
+          packer build -machine-readable image.pkr.hcl | tee packer.log
+          AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' packer.log | cut -d: -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+
+      - name: Share AMI with Demo Account
+        run: |
+          aws ec2 modify-image-attribute \
+            --image-id ${{ steps.packer.outputs.ami_id }} \
+            --launch-permission '{"Add":[{"UserId":"${{ secrets.DEMO_ACCOUNT_ID }}"}]}'
+
+      # - name: Share AMI with Demo Account
+      #   run: |
+      #     aws ec2 modify-image-attribute --image-id ${{ steps.packer.outputs.ami_id }} --launch-permission "Add=[{UserId=${{ secrets.DEMO_ACCOUNT_ID }}]"
