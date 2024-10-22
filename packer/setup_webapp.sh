@@ -7,8 +7,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3 python3-pip unzip postgresql python3-venv libpq-dev
 
 # Setup PostgreSQL
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'Grey@1234';"
-sudo -u postgres psql -c "CREATE DATABASE webappdb;"
+# sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'Grey@1234';"
+# sudo -u postgres psql -c "CREATE DATABASE webappdb;"
  
 # Create a system user for the application
 sudo groupadd csye6225
@@ -31,12 +31,12 @@ sudo unzip webapp.zip -d /home/csye6225/webapp
 sudo chown -R csye6225:csye6225 /home/csye6225/webapp/
  
 # Create the .env file with database configurations as the correct user
-sudo -u csye6225 bash -c 'touch /home/csye6225/webapp/.env'
-sudo -u csye6225 bash -c 'echo "DATABASE_NAME='\''webappdb'\''" > /home/csye6225/webapp/.env'
-sudo -u csye6225 bash -c 'echo "DATABASE_USER='\''postgres'\''" >> /home/csye6225/webapp/.env'
-sudo -u csye6225 bash -c 'echo "DATABASE_PASSWORD='\''Grey@1234'\''" >> /home/csye6225/webapp/.env'
-sudo -u csye6225 bash -c 'echo "DATABASE_HOST='\''localhost'\''" >> /home/csye6225/webapp/.env'
-sudo -u csye6225 bash -c 'echo "DATABASE_PORT='\''5432'\''" >> /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'touch /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'echo "DATABASE_NAME='\''webappdb'\''" > /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'echo "DATABASE_USER='\''postgres'\''" >> /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'echo "DATABASE_PASSWORD='\''Grey@1234'\''" >> /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'echo "DATABASE_HOST='\''localhost'\''" >> /home/csye6225/webapp/.env'
+# sudo -u csye6225 bash -c 'echo "DATABASE_PORT='\''5432'\''" >> /home/csye6225/webapp/.env'
  
 # Remove the existing virtual environment
 sudo -u csye6225 bash -c 'rm -rf /home/csye6225/webapp/venv'
@@ -48,7 +48,7 @@ sudo -u csye6225 bash -c 'python3 -m venv /home/csye6225/webapp/venv'
 sudo -u csye6225 bash -c 'source /home/csye6225/webapp/venv/bin/activate && pip install --upgrade pip && pip install -r /home/csye6225/webapp/requirements.txt'
  
 # Run Django migrations
-sudo -u csye6225 bash -c 'source /home/csye6225/webapp/venv/bin/activate && python3 /home/csye6225/webapp/manage.py makemigrations && python3 /home/csye6225/webapp/manage.py migrate'
+# sudo -u csye6225 bash -c 'source /home/csye6225/webapp/venv/bin/activate && python3 /home/csye6225/webapp/manage.py makemigrations && python3 /home/csye6225/webapp/manage.py migrate'
  
 # Copy the systemd service file for the web application
 sudo cp /home/csye6225/webapp/webapp.service /etc/systemd/system/webapp.service
