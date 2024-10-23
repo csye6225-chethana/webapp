@@ -1,7 +1,5 @@
 # webapp
 
-testttt
-
 Hi Guys!
 
 Let start cloud assignments in this repo :)
