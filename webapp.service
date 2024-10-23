@@ -6,7 +6,7 @@ After=network.target postgresql.service
 User=csye6225
 Group=csye6225
 WorkingDirectory=/home/csye6225/webapp
-EnvironmentFile=/home/csye6225/webapp/.env
+EnvironmentFile=/etc/environment
 ExecStart=/home/csye6225/webapp/venv/bin/python /home/csye6225/webapp/manage.py runserver 0.0.0.0:8000
 Restart=always
  
