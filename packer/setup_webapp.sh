@@ -4,7 +4,7 @@
 sudo apt update && sudo apt upgrade -y
 
 # Install required packages
-sudo apt install -y python3 python3-pip unzip postgresql python3-venv libpq-dev
+sudo apt install -y python3 python3-pip unzip python3-venv libpq-dev
 
 # Setup PostgreSQL
 # sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'Grey@1234';"
