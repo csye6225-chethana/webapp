@@ -14,9 +14,8 @@ import logging
 from django.conf import settings
 
 from .models import User
-# from .models import Image
+from .models import Image
 
-# Setup logger
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +44,11 @@ def custom_404_view(request, exception):
 
 @api_view(['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST'])
 def create_user(request):
+    logger.debug("create_user This is a debug message.")
+    logger.info("create_user This is an info message.")
+    logger.warning("create_user This is a warning message.")
+    logger.error("create_user This is an error message.")
+    logger.critical("create_user This is a critical message.")
     try:
         connection.ensure_connection()
     except Exception:
@@ -204,117 +208,119 @@ def update_user_details(user, request):
     except Exception as e:
         return Response({'error': 'Error updating user details'}, status=status.HTTP_400_BAD_REQUEST)
     
-
+# start image apis code
 
 from django.http import HttpResponse, JsonResponse
 import bcrypt
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 
-# Initialize S3 client
-s3_client = boto3.client('s3')
-# bucket_name = "csye6225-image"  # Replace with your bucket name
+s3_client = boto3.client('s3') # initialize S3 client
+# bucket_name = "myawsbucketbenny"  # Replace with your bucket name
 bucket_name = settings.S3_BUCKET_NAME
 
-# def authenticate_user(auth_header):
-#     """Authenticate user using Basic Auth."""
-#     if not auth_header or not auth_header.startswith('Basic '):
-#         return None, "Authorization header missing or malformed"
-
-#     try:
-#         credentials = base64.b64decode(auth_header.split(' ')[1]).decode('utf-8')
-#         email, password = credentials.split(':')
-#         user = User.objects.get(email=email)
+def authenticate_user(request):
+    try:
+        auth = request.META['HTTP_AUTHORIZATION'].split()
+        if len(auth) != 2 or auth[0].lower() != "basic":
+            return Response({'error': 'Invalid authorization header'}, status=status.HTTP_401_UNAUTHORIZED)
         
-#         if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-#             return user, None
-#         else:
-#             return None, "Invalid credentials"
-#     except (User.DoesNotExist, ValueError):
-#         return None, "User not found or error in credentials format"
+        email, password = base64.b64decode(auth[1]).decode().split(':')
+        user = User.objects.get(email=email)
+        if check_password(password, user.password):
+            return user, None
+        else:
+            return None, "Invalid credentials"
+    except (User.DoesNotExist, ValueError):
+        return None, "User not found or error in credentials format"
 
 
-# @api_view(['POST', 'GET', 'DELETE'])
-# def image_view(request):
-#     # Ensure database connection
-#     try:
-#         connection.ensure_connection()
-#     except Exception as e:
-#         logger.error("Database connection error: %s", str(e))
-#         return HttpResponse(status=503)
+@api_view(['POST', 'GET', 'DELETE'])
+def image_view(request):
+    logger.debug("image_view This is a debug message.")
+    logger.info("image_view This is an info message.")
+    logger.warning("image_view This is a warning message.")
+    logger.error("image_view This is an error message.")
+    logger.critical("image_view This is a critical message.")
+    # Ensure database connection
+    try:
+        connection.ensure_connection()
+    except Exception as e:
+        logger.error("Database connection error: %s", str(e))
+        return HttpResponse(status=503)
 
-#     # Authenticate user
-#     user, auth_error = authenticate_user(request.headers.get('Authorization'))
-#     if auth_error:
-#         logger.warning("Authentication failed: %s", auth_error)
-#         return JsonResponse({"error": auth_error}, status=status.HTTP_401_UNAUTHORIZED)
+    # Authenticate user
+    user, auth_error = authenticate_user(request)
+    if auth_error:
+        logger.warning("Authentication failed: %s", auth_error)
+        return JsonResponse({"error": auth_error}, status=status.HTTP_401_UNAUTHORIZED)
 
-#     # Handle POST - Upload a new image
-#     if request.method == 'POST':
-#         if 'file' not in request.FILES:
-#             return JsonResponse({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+    # Handle POST - Upload a new image
+    if request.method == 'POST':
+        if 'file' not in request.FILES:
+            return JsonResponse({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-#         if Image.objects.filter(user_id=user).exists():
-#             return JsonResponse({"error": "User already has an uploaded image"}, status=status.HTTP_400_BAD_REQUEST)
+        if Image.objects.filter(user_id=user).exists():
+            return JsonResponse({"error": "User already has an uploaded image"}, status=status.HTTP_400_BAD_REQUEST)
 
-#         uploaded_file = request.FILES['file']
-#         file_name = uploaded_file.name
-#         s3_key = f"{user.id}/{file_name}"
+        uploaded_file = request.FILES['file']
+        file_name = uploaded_file.name
+        s3_key = f"{user.id}/{file_name}"
 
-#         try:
-#             s3_client.upload_fileobj(uploaded_file, bucket_name, s3_key)
-#             url = f"{bucket_name}/{s3_key}"
+        try:
+            s3_client.upload_fileobj(uploaded_file, bucket_name, s3_key)
+            url = f"{bucket_name}/{s3_key}"
 
-#             image = Image.objects.create(
-#                 file_name=file_name,
-#                 url=url,
-#                 user_id=user
-#             )
-#             return JsonResponse({
-#                 "id": str(image.id),
-#                 "file_name": image.file_name,
-#                 "url": image.url,
-#                 "upload_date": image.upload_date.strftime("%Y-%m-%d"),
-#                 "user_id": str(user.id)
-#             }, status=status.HTTP_201_CREATED)
+            image = Image.objects.create(
+                file_name=file_name,
+                url=url,
+                user_id=user
+            )
+            return JsonResponse({
+                "id": str(image.id),
+                "file_name": image.file_name,
+                "url": image.url,
+                "upload_date": image.upload_date.strftime("%Y-%m-%d"),
+                "user_id": str(user.id)
+            }, status=status.HTTP_201_CREATED)
 
-#         except (NoCredentialsError, ClientError) as e:
-#             logger.error("S3 upload failed: %s", str(e))
-#             return JsonResponse({"error": "S3 upload failed"}, status=status.HTTP_403_FORBIDDEN)
-#         except Exception as e:
-#             logger.error("Unexpected error during upload: %s", str(e))
-#             return JsonResponse({"error": "Failed to upload image"}, status=status.HTTP_400_BAD_REQUEST)
+        except (NoCredentialsError, ClientError) as e:
+            logger.error("S3 upload failed: %s", str(e))
+            return JsonResponse({"error": "S3 upload failed"}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            logger.error("Unexpected error during upload: %s", str(e))
+            return JsonResponse({"error": "Failed to upload image"}, status=status.HTTP_400_BAD_REQUEST)
 
-#     # Handle GET - Retrieve an image
-#     elif request.method == 'GET':
-#         try:
-#             image = Image.objects.get(user_id=user)
-#             return JsonResponse({
-#                 "file_name": image.file_name,
-#                 "id": image.id,
-#                 "url": image.url,
-#                 "uploaded_date": image.upload_date.strftime("%Y-%m-%d"),
-#                 "user_id": str(image.user_id.id)
-#             }, status=status.HTTP_200_OK)
-#         except Image.DoesNotExist:
-#             return JsonResponse({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
+    # Handle GET - Retrieve an image
+    elif request.method == 'GET':
+        try:
+            image = Image.objects.get(user_id=user)
+            return JsonResponse({
+                "file_name": image.file_name,
+                "id": image.id,
+                "url": image.url,
+                "uploaded_date": image.upload_date.strftime("%Y-%m-%d"),
+                "user_id": str(image.user_id.id)
+            }, status=status.HTTP_200_OK)
+        except Image.DoesNotExist:
+            return JsonResponse({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
 
-#     # Handle DELETE - Delete an image
-#     elif request.method == 'DELETE':
-#         try:
-#             image = Image.objects.get(user_id=user)
-#             s3_client.delete_object(Bucket=bucket_name, Key=image.url.split(f"{bucket_name}/")[-1])
-#             image.delete()
-#             return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+    # Handle DELETE - Delete an image
+    elif request.method == 'DELETE':
+        try:
+            image = Image.objects.get(user_id=user)
+            s3_client.delete_object(Bucket=bucket_name, Key=image.url.split(f"{bucket_name}/")[-1])
+            image.delete()
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
-#         except Image.DoesNotExist:
-#             return JsonResponse({"error": "No images found for this user"}, status=status.HTTP_404_NOT_FOUND)
-#         except NoCredentialsError:
-#             logger.error("S3 credentials not available")
-#             return JsonResponse({"error": "S3 credentials not available"}, status=status.HTTP_403_FORBIDDEN)
-#         except Exception as e:
-#             logger.error("Unexpected error during deletion: %s", str(e))
-#             return JsonResponse({"error": "Failed to delete image"}, status=status.HTTP_400_BAD_REQUEST)
+        except Image.DoesNotExist:
+            return JsonResponse({"error": "No images found for this user"}, status=status.HTTP_404_NOT_FOUND)
+        except NoCredentialsError:
+            logger.error("S3 credentials not available")
+            return JsonResponse({"error": "S3 credentials not available"}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            logger.error("Unexpected error during deletion: %s", str(e))
+            return JsonResponse({"error": "Failed to delete image"}, status=status.HTTP_400_BAD_REQUEST)
 
-#     return HttpResponse(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    return HttpResponse(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 

@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import watchtower
+import boto3
+
+boto3.setup_default_session(region_name='us-east-1"')
 
 load_dotenv()
 
@@ -174,12 +178,24 @@ LOGGING = {
             'filename': os.path.join(BASE_DIR, 'logs', 'webapp.log'),
             'formatter': 'verbose',
         },
+        'cloudwatch': {
+            'level': 'DEBUG',
+            'class': 'watchtower.CloudWatchLogHandler',
+            'log_group': 'test-log-group',
+            'stream_name': 'test-stream',
+            'boto3_session': boto3.Session()
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['file', 'cloudwatch'],
             'level': 'INFO',
             'propagate': True,
+        },
+        'backend_api': {
+            'handlers': ['file', 'cloudwatch'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
 }
