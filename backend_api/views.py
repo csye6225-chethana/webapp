@@ -16,8 +16,9 @@ from django.conf import settings
 from .models import User
 from .models import Image
 
-logger = logging.getLogger(__name__)
+from backend_api.metrics import track_api_metrics, DatabaseQueryTimer, S3OperationTimer
 
+logger = logging.getLogger(__name__)
 
 @csrf_exempt 
 def health_check(request):
@@ -236,6 +237,7 @@ def authenticate_user(request):
 
 
 @api_view(['POST', 'GET', 'DELETE'])
+@track_api_metrics
 def image_view(request):
     logger.debug("image_view This is a debug message.")
     logger.info("image_view This is an info message.")
@@ -267,15 +269,24 @@ def image_view(request):
         file_name = uploaded_file.name
         s3_key = f"{user.id}/{file_name}"
 
-        try:
-            s3_client.upload_fileobj(uploaded_file, bucket_name, s3_key)
-            url = f"{bucket_name}/{s3_key}"
+        # Define acceptable MIME types for images
+        ACCEPTABLE_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg"]
+        file_type = uploaded_file.content_type
+        if file_type not in ACCEPTABLE_IMAGE_TYPES:
+            logger.error("Invalid file type. Only PNG, JPG, and JPEG are allowed.")
+            return JsonResponse({"error": "Invalid file type. Only PNG, JPG, and JPEG are allowed."}, status=status.HTTP_400_BAD_REQUEST)
 
-            image = Image.objects.create(
-                file_name=file_name,
-                url=url,
-                user_id=user
-            )
+        try:
+            with S3OperationTimer('upload_fileobj'):
+                s3_client.upload_fileobj(uploaded_file, bucket_name, s3_key)
+            url = f"s3://{bucket_name}/{s3_key}"
+
+            with DatabaseQueryTimer('create_image'):
+                image = Image.objects.create(
+                    file_name=file_name,
+                    url=url,
+                    user_id=user
+                )
             return JsonResponse({
                 "id": str(image.id),
                 "file_name": image.file_name,
