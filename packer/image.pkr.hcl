@@ -56,6 +56,25 @@ build {
     script = "setup_webapp.sh"
   }
 
+  # Install CloudWatch Agent
+  provisioner "shell" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y wget",
+
+      # Download and install the CloudWatch Agent
+      "wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
+      "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
+
+      # Enable CloudWatch Agent to start on boot
+      "sudo systemctl enable amazon-cloudwatch-agent",
+
+      # Clean up installation files
+      "rm -f amazon-cloudwatch-agent.deb"
+    ]
+  }
+
+  # Cleanup provisioner to remove git and its dependencies
   provisioner "shell" {
     inline = [
       "sudo apt-get update",
