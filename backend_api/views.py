@@ -269,8 +269,8 @@ import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 
 s3_client = boto3.client('s3') # initialize S3 client
-# bucket_name = settings.S3_BUCKET_NAME
-bucket_name = "myawsbucketbenny" # public s3 to test locally
+bucket_name = settings.S3_BUCKET_NAME
+# bucket_name = "myawsbucketbenny" # public s3 to test locally
 
 def authenticate_user(request):
 
