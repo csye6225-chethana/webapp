@@ -1,8 +1,7 @@
 name: Run webapp integration tests and then build custom AMI with Packer
  
 on:
-  # push:
-  pull_request:
+  push:
     branches:
       - main
  
