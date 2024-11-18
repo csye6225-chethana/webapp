@@ -14,7 +14,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
+load_dotenv(override=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -90,17 +91,21 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-
+print("DEBUG: Database settings being used:")
+print(f"NAME: {os.environ.get('DATABASE_NAME','webappdbtest')}")
+print(f"USER: {os.environ.get('DATABASE_USER', 'postgres')}")
+print(f"HOST: {os.environ.get('DATABASE_HOST', 'webappdbtest.cpky6skyktdr.us-east-1.rds.amazonaws.com')}")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DATABASE_NAME'),
-        'USER': os.environ.get('DATABASE_USER'),
-        'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
-        'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
+        'NAME': os.environ.get('DATABASE_NAME','webappdbtest'),
+        'USER': os.environ.get('DATABASE_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'Grey1234'),
+        'HOST': os.environ.get('DATABASE_HOST', 'webappdbtest.cpky6skyktdr.us-east-1.rds.amazonaws.com'),
         'PORT': os.environ.get('DATABASE_PORT', '5432'),
     }
 }
+print("FINAL DATABASE SETTINGS:", DATABASES['default'])
 
 S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
 

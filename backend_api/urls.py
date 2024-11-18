@@ -13,4 +13,6 @@ urlpatterns = [
 
     path('v1/user/self/pic', views.profile_pic, name='profile_pic'),
     path('v1/user/self/pic/', views.profile_pic, name='profile_pic'),
+
+    path('verify/', views.verify_user, name='verify_user'),
 ]
