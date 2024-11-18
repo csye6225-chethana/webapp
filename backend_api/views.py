@@ -21,11 +21,11 @@ from django.shortcuts import render
 from django.utils.timezone import now
 
 s3_client = boto3.client('s3') # initialize S3 client
-# bucket_name = settings.S3_BUCKET_NAME
-bucket_name = "myawsbucketbenny" # public s3 to test locally
+bucket_name = settings.S3_BUCKET_NAME
+# bucket_name = "myawsbucketbenny" # public s3 to test locally
 
 sns_client = boto3.client('sns', region_name='us-east-1')
-sns_topic_arn = 'arn:aws:sns:us-east-1:976193221963:test_topic'
+sns_topic_arn = settings.SNS_TOPIC_ARN
 
 from .models import User, Image, SentEmail
 from backend_api.metrics import track_api_metrics, DatabaseQueryTimer, S3OperationTimer

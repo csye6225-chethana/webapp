@@ -109,6 +109,8 @@ print("FINAL DATABASE SETTINGS:", DATABASES['default'])
 
 S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
 
+SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
