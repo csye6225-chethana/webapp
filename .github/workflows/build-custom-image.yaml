@@ -1,9 +1,9 @@
 name: Run webapp integration tests and then build custom AMI with Packer
  
-on:
-  pull_request:
-    branches:
-      - main
+# on:
+#   pull_request:
+#     branches:
+#       - main
  
 jobs:
   webapp_integration_tests:

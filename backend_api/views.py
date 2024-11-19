@@ -70,10 +70,15 @@ def custom_404_view(request, exception):
 
 def authenticate_user(request):
     logger.info("Inside authenticate_user...")
+
+    if 'HTTP_AUTHORIZATION' not in request.META:
+        logger.error("Authentication required for user_detail.")
+        return None, "Authentication required"
+
     try:
         auth = request.META['HTTP_AUTHORIZATION'].split()
         if len(auth) != 2 or auth[0].lower() != "basic":
-            return Response({'error': 'Invalid authorization header'}, status=status.HTTP_401_UNAUTHORIZED)
+            return None, "Invalid authorization header"
         
         email, password = base64.b64decode(auth[1]).decode().split(':')
         user = User.objects.get(email=email)
@@ -248,10 +253,6 @@ def user_detail(request):
     if request.method in ['OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST']:
         logger.error("Invalid method for user_detail: %s", request.method)
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
-    if 'HTTP_AUTHORIZATION' not in request.META:
-        logger.error("Authentication required for user_detail.")
-        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
     
     # Authenticate user
     user, auth_error = authenticate_user(request)
