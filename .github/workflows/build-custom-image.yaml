@@ -174,7 +174,7 @@ jobs:
 
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name webapp-auto-scaling-group \
+              --auto-scaling-group-name "${{ secrets.AUTOSCALING_GROUP_NAME }}" \
               --query "InstanceRefreshes[0].Status" \
               --output text)
             echo "Current Status: $STATUS"
@@ -235,7 +235,7 @@ jobs:
 
           while true; do
             STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name webapp-auto-scaling-group \
+              --auto-scaling-group-name "${{ secrets.AUTOSCALING_GROUP_NAME }}" \
               --query "InstanceRefreshes[0].Status" \
               --output text)
             echo "Current Status: $STATUS"
