@@ -141,8 +141,7 @@ jobs:
           fi
 
       - name: Configure DEV account AWS credentials
-        if: env.TEMPLATE_EXISTS == 'true'
-        if: contains(env.ENVIRONMENTS, 'dev')
+        if: env.TEMPLATE_EXISTS == 'true' && contains(env.ENVIRONMENTS, 'dev')
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -150,8 +149,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Process dev environment
-        if: env.TEMPLATE_EXISTS == 'true'
-        if: ${{ env.ENVIRONMENTS == 'dev' || env.ENVIRONMENTS == 'dev,demo' }}
+        if: env.TEMPLATE_EXISTS == 'true' && ${{ env.ENVIRONMENTS == 'dev' || env.ENVIRONMENTS == 'dev,demo' }}
         run: |
           echo "currently running in Dev Environment..."
           # Add Dev-specific commands here
@@ -205,8 +203,7 @@ jobs:
           done
 
       - name: Configure DEMO account AWS credentials
-        if: env.TEMPLATE_EXISTS == 'true'
-        if: ${{ env.ENVIRONMENTS == 'demo' || env.ENVIRONMENTS == 'dev,demo' }}
+        if: env.TEMPLATE_EXISTS == 'true' && ${{ env.ENVIRONMENTS == 'demo' || env.ENVIRONMENTS == 'dev,demo' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.DEMO_AWS_ACCESS_KEY_ID }}
@@ -214,8 +211,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Process demo environment
-        if: env.TEMPLATE_EXISTS == 'true'
-        if: contains(env.ENVIRONMENTS, 'demo')
+        if: env.TEMPLATE_EXISTS == 'true' && contains(env.ENVIRONMENTS, 'demo')
         run: |
           echo "currently running in Demo Environment..."
           # Add Demo-specific commands here
