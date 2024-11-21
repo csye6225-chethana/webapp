@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from .models import User
 from django.contrib.auth.hashers import make_password, check_password
 import base64
+from unittest.mock import patch
 
 class UserAPITests(TestCase):
     def setUp(self):
@@ -17,10 +18,13 @@ class UserAPITests(TestCase):
             first_name='Test',
             last_name='User'
         )
+        User.objects.filter(email='testuser@gmail.com').update(is_verified=True)
 
     # start tests for create user
 
-    def test_create_user_success(self):
+    @patch('backend_api.views.sns_client.publish')
+    def test_create_user_success(self, mock_publish):
+        mock_publish.return_value = {'MessageId': 'mock-message-id'}
         data = {
             'email': 'newuser@gmail.com',
             'password': 'newpassword',

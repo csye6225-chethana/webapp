@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db import connection
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authentication import BasicAuthentication
@@ -12,8 +12,22 @@ from django.contrib.auth.hashers import make_password, check_password
 import base64
 import logging
 from django.conf import settings
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
+from functools import wraps
+import json
+import datetime
+from django.shortcuts import render
+from django.utils.timezone import now
 
-from .models import User, Image
+s3_client = boto3.client('s3') # initialize S3 client
+bucket_name = settings.S3_BUCKET_NAME
+# bucket_name = "myawsbucketbenny" # public s3 to test locally
+
+sns_client = boto3.client('sns', region_name='us-east-1')
+sns_topic_arn = settings.SNS_TOPIC_ARN
+
+from .models import User, Image, SentEmail
 from backend_api.metrics import track_api_metrics, DatabaseQueryTimer, S3OperationTimer
 
 
@@ -24,7 +38,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt 
 @track_api_metrics
 def health_check(request):
-    print("Inside health_check API view...")
+    logger.info("Inside health_check API view...")
 
     if request.method != 'GET':
         response = HttpResponse(status=405) # Method Not Allowed
@@ -38,6 +52,8 @@ def health_check(request):
     
     try:
         connection.ensure_connection() # check connection to db
+        print(">>>>>>>>> db_name:", connection.settings_dict['NAME'])
+        print(">>>>>>>>> db_user:", connection.settings_dict['USER'])
         response = HttpResponse(status=200) # 200 OK if the connection is successful
         logger.info("Health check successful.")
     except Exception as e:
@@ -50,14 +66,48 @@ def custom_404_view(request, exception):
     return HttpResponse(status=404)
 
 
+############### check user authentication & verification ###############
+
+def authenticate_user(request):
+    logger.info("Inside authenticate_user...")
+
+    if 'HTTP_AUTHORIZATION' not in request.META:
+        logger.error("Authentication required for user_detail.")
+        return None, "Authentication required"
+
+    try:
+        auth = request.META['HTTP_AUTHORIZATION'].split()
+        if len(auth) != 2 or auth[0].lower() != "basic":
+            return None, "Invalid authorization header"
+        
+        email, password = base64.b64decode(auth[1]).decode().split(':')
+        user = User.objects.get(email=email)
+        if check_password(password, user.password):
+            return user, None
+        else:
+            return None, "Invalid credentials"
+    except (User.DoesNotExist, ValueError):
+        return None, "User not found or error in credentials format"
+
+def require_verified_user(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        user, auth_error = authenticate_user(request)
+        if auth_error:
+            return JsonResponse({"error": auth_error}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_verified:
+            return JsonResponse({"error": "User account not verified"}, status=status.HTTP_403_FORBIDDEN)
+
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
 ############### start user apis ###############
 
 @api_view(['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST'])
 @track_api_metrics
 def create_user(request):
-
     logger.info("Inside create_user API view...")
-
     try:
         connection.ensure_connection()
     except Exception as e:
@@ -114,18 +164,57 @@ def create_user(request):
         logger.error("A user with this email already exists: %s", email)
         return Response({'error': 'A user with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
+    # create user
     try:
         with DatabaseQueryTimer('create_user'): 
             hashed_password = make_password(password)
-
             user = User.objects.create(
                 email=email,
                 password=hashed_password,
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                is_verified=False
             )
 
         logger.info("User created successfully: %s", email)
+
+        # Generate token and expiration time
+        token, expiration_time = generate_verification_data()
+        print(">>>>>>>>> token:", token)
+
+        # Save token to RDS
+        try:
+            SentEmail.objects.create(
+                user=user,
+                token=token,
+                expiration_time=expiration_time,
+                sent_at=now()
+            )
+            logger.info("Token saved to SentEmail for user: %s", email)
+
+        except Exception as e:
+            logger.error("Failed to save token in SentEmail: %s", str(e))
+            return {"status": "error", "message": f"Failed to save token: {str(e)}"}
+
+        # message payload for SNS
+        payload = {
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "token": token,
+        }
+
+        # publish to SNS
+        try:
+            sns_response = sns_client.publish(
+                TopicArn=sns_topic_arn,
+                Message=json.dumps(payload),
+                Subject="New User Verification Email"
+            )
+            logger.info("Published message to SNS for user: %s", user.email)
+        except Exception as e:
+            logger.error("Failed to publish message to SNS: %s", str(e))
+            return Response({'error': 'Error sending verification email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
             'id': str(user.id),
@@ -140,9 +229,17 @@ def create_user(request):
         logger.error("Error creating user: %s", str(e))
         return Response({'error': 'Error creating user. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
 
+import uuid
+from datetime import datetime, timedelta
+def generate_verification_data():
+    token = str(uuid.uuid4()) 
+    expiration_time = datetime.utcnow() + timedelta(minutes=2)
+    return token, expiration_time
+
 
 @api_view(['GET', 'PUT', 'OPTIONS', 'DELETE', 'PATCH', 'HEAD', 'POST'])
 @track_api_metrics
+@require_verified_user
 def user_detail(request):
 
     logger.info("Inside user_detail API view...")
@@ -157,38 +254,16 @@ def user_detail(request):
         logger.error("Invalid method for user_detail: %s", request.method)
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
-    if 'HTTP_AUTHORIZATION' not in request.META:
-        logger.error("Authentication required for user_detail.")
-        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
-    
-    try:
-        auth = request.META['HTTP_AUTHORIZATION'].split()
-        if len(auth) != 2 or auth[0].lower() != "basic":
-            logger.error("Invalid authorization header: %s", auth)
-            return Response({'error': 'Invalid authorization header'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        email, password = base64.b64decode(auth[1]).decode().split(':')
-    except (IndexError, base64.binascii.Error, UnicodeDecodeError, ValueError) as e:
-        logger.error("Error decoding authorization header: %s", str(e))
-        return Response({'error': 'Invalid authorization header'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    try:
-        with DatabaseQueryTimer('get_user'):
-            user = User.objects.get(email=email)
-            logger.info("User found: %s", email)
-    except User.DoesNotExist:
-        logger.error("User not found: %s", email)
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    if not check_password(password, user.password):
-        logger.error("Invalid credentials for user: %s", email)
-        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    # Authenticate user
+    user, auth_error = authenticate_user(request)
+    if auth_error:
+        logger.error("Authentication failed: %s", auth_error)
+        return JsonResponse({"error": auth_error}, status=status.HTTP_401_UNAUTHORIZED)
     
     if request.method == 'GET':
         return get_user_details(user, request)
     elif request.method == 'PUT':
         return update_user_details(user, request)
-
 
 def get_user_details(user, request):
 
@@ -264,35 +339,9 @@ def update_user_details(user, request):
 
 ############### start image apis ###############
 
-from django.http import HttpResponse, JsonResponse
-import boto3
-from botocore.exceptions import NoCredentialsError, ClientError
-
-s3_client = boto3.client('s3') # initialize S3 client
-bucket_name = settings.S3_BUCKET_NAME
-# bucket_name = "myawsbucketbenny" # public s3 to test locally
-
-def authenticate_user(request):
-
-    logger.info("Inside authenticate_user...")
-    
-    try:
-        auth = request.META['HTTP_AUTHORIZATION'].split()
-        if len(auth) != 2 or auth[0].lower() != "basic":
-            return Response({'error': 'Invalid authorization header'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        email, password = base64.b64decode(auth[1]).decode().split(':')
-        user = User.objects.get(email=email)
-        if check_password(password, user.password):
-            return user, None
-        else:
-            return None, "Invalid credentials"
-    except (User.DoesNotExist, ValueError):
-        return None, "User not found or error in credentials format"
-
-
 @api_view(['POST', 'GET', 'DELETE'])
 @track_api_metrics
+@require_verified_user
 def profile_pic(request):
     
     logger.info("Inside profile_pic API view...")
@@ -408,3 +457,31 @@ def profile_pic(request):
 
     return HttpResponse(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+
+############### verify user ###############
+
+@track_api_metrics    
+def verify_user(request):
+    print(">>>>>>>>> inside verify_user")
+    email = request.GET.get('user')
+    token = request.GET.get('token')
+
+    if not email or not token:
+        return JsonResponse({"error": "Invalid verification link"}, status=400)
+
+    try:
+        sent_email = SentEmail.objects.get(user__email=email, token=token)
+        user = sent_email.user
+
+        if user.is_verified:
+            return JsonResponse({"error": "User already verified"}, status=400)
+        
+        if now() > sent_email.expiration_time:
+            return JsonResponse({"error": "Verification link has expired"}, status=400)
+
+        user.is_verified = True
+        user.save()
+
+        return JsonResponse({"success": "User verified successfully"})
+    except SentEmail.DoesNotExist:
+        return JsonResponse({"error": "Invalid verification details"}, status=400)

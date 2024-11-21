@@ -41,6 +41,14 @@ I am using Django & PostgreSQL for the backend.
 - Automate above step using github actions workflow
 - Launch an ec2 instance using the custom image from terraform 
 
+## [A08 Custom Image for webapp, Continuous Integration]
+Flow:
+User sends post request to create account
+-> In post API a message is send to an SNS topic in AWS
+-> The SNS topic, triggers the lambda function
+-> The Lambda function sends an email with a verification link
+-> User clicks link to complete registration
+
 ## Prerequisites for building the Django web application:
 
 - Python 3.x 
