@@ -1,7 +1,7 @@
 name: Run webapp integration tests and then build custom AMI with Packer
  
 on:
-  pull_request:
+  push:
     branches:
       - main
  
@@ -108,25 +108,13 @@ jobs:
             --image-id ${{ steps.packer.outputs.ami_id }} \
             --launch-permission '{"Add":[{"UserId":"${{ secrets.DEMO_ACCOUNT_ID }}"}]}'
 
-      - name: Check Launch Template Existence
-        id: check-template
-        run: |
-          aws ec2 describe-launch-templates --launch-template-names "${{ secrets.LAUNCH_TEMPLATE_NAME }}" > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
-            echo "TEMPLATE_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "TEMPLATE_EXISTS=false" >> $GITHUB_ENV
-          fi
-
       - name: Get the Environment
-        if: env.TEMPLATE_EXISTS == 'true'
         id: fetch-environment-vars
         run: |
           echo "IS_DEV_ENVIRONMENT=${{ vars.isDevEnvironment }}" >> $GITHUB_ENV
           echo "IS_DEMO_ENVIRONMENT=${{ vars.isDemoEnvironment }}" >> $GITHUB_ENV
 
       - name: Set the Environment
-        if: env.TEMPLATE_EXISTS == 'true'
         id: determine-environment
         run: |
           if [ "${{ env.IS_DEV_ENVIRONMENT }}" == "true" ] && [ "${{ env.IS_DEMO_ENVIRONMENT }}" == "true" ]; then
@@ -141,7 +129,7 @@ jobs:
           fi
 
       - name: Configure DEV account AWS credentials
-        if: env.TEMPLATE_EXISTS == 'true' && contains(env.ENVIRONMENTS, 'dev')
+        if: contains(env.ENVIRONMENTS, 'dev')
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -149,7 +137,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Process dev environment
-        if: env.TEMPLATE_EXISTS == 'true' && ${{ env.ENVIRONMENTS == 'dev' || env.ENVIRONMENTS == 'dev,demo' }}
+        if: ${{ env.ENVIRONMENTS == 'dev' || env.ENVIRONMENTS == 'dev,demo' }}
         run: |
           echo "currently running in Dev Environment..."
           # Add Dev-specific commands here
@@ -203,7 +191,7 @@ jobs:
           done
 
       - name: Configure DEMO account AWS credentials
-        if: env.TEMPLATE_EXISTS == 'true' && ${{ env.ENVIRONMENTS == 'demo' || env.ENVIRONMENTS == 'dev,demo' }}
+        if: ${{ env.ENVIRONMENTS == 'demo' || env.ENVIRONMENTS == 'dev,demo' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.DEMO_AWS_ACCESS_KEY_ID }}
@@ -211,7 +199,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Process demo environment
-        if: env.TEMPLATE_EXISTS == 'true' && contains(env.ENVIRONMENTS, 'demo')
+        if: contains(env.ENVIRONMENTS, 'demo')
         run: |
           echo "currently running in Demo Environment..."
           # Add Demo-specific commands here
@@ -264,7 +252,6 @@ jobs:
           done
 
       - name: Skip Infra Updates
-        if: env.TEMPLATE_EXISTS == 'false'
         run: |
           echo "No launch template found. Skipping infrastructure update."
             

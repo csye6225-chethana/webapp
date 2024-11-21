@@ -5,14 +5,14 @@ urlpatterns = [
     path('healthz', views.health_check, name='health_check'),
     path('healthz/', views.health_check, name='health_check'),
 
-    path('v2/user', views.create_user, name='create_user'),
-    path('v2/user/', views.create_user, name='create_user'),
+    path('v1/user', views.create_user, name='create_user'),
+    path('v1/user/', views.create_user, name='create_user'),
 
-    path('v2/user/self', views.user_detail, name='user_detail'),
-    path('v2/user/self/', views.user_detail, name='user_detail'),
+    path('v1/user/self', views.user_detail, name='user_detail'),
+    path('v1/user/self/', views.user_detail, name='user_detail'),
 
-    path('v2/user/self/pic', views.profile_pic, name='profile_pic'),
-    path('v2/user/self/pic/', views.profile_pic, name='profile_pic'),
+    path('v1/user/self/pic', views.profile_pic, name='profile_pic'),
+    path('v1/user/self/pic/', views.profile_pic, name='profile_pic'),
 
     path('verify/', views.verify_user, name='verify_user'),
 ]
